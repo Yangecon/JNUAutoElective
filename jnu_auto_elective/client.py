@@ -7,6 +7,7 @@ import re
 import time
 from dataclasses import dataclass, field
 from typing import Any, Callable, Iterable, Optional
+from urllib.parse import urlparse
 
 import requests
 
@@ -21,6 +22,36 @@ from .credentials import Credentials
 
 class ApiError(Exception):
     """Raised when an API request fails or returns unusable data."""
+
+
+def _response_snippet(response: requests.Response, *, limit: int = 240) -> str:
+    text = response.text.replace("\r", " ").replace("\n", " ").strip()
+    if len(text) > limit:
+        text = f"{text[:limit]}..."
+    return text or "(empty body)"
+
+
+def _json_or_error(response: requests.Response, action: str) -> Any:
+    try:
+        response.raise_for_status()
+    except requests.HTTPError as exc:
+        raise ApiError(
+            f"{action} 返回 HTTP {response.status_code}: {_response_snippet(response)}"
+        ) from exc
+    response_host = urlparse(response.url).netloc.lower()
+    if "icas.jnu.edu.cn" in response_host or "auth4.jnu.edu.cn" in response_host:
+        raise ApiError(
+            f"{action} 未通过学校统一身份认证，当前 credentials 可能已失效，"
+            "请点击“重新登录”重新捕获 credentials。"
+        )
+    try:
+        return response.json()
+    except ValueError as exc:
+        content_type = response.headers.get("Content-Type", "unknown")
+        raise ApiError(
+            f"{action} 返回的不是 JSON，HTTP {response.status_code}，"
+            f"Content-Type: {content_type}，响应片段: {_response_snippet(response)}"
+        ) from exc
 
 
 @dataclass(frozen=True)
@@ -139,6 +170,11 @@ class CourseClient:
     def __init__(self, credentials: Credentials):
         self.credentials = credentials
         self.session = requests.Session()
+        # Do not inherit system/environment proxies such as 127.0.0.1:7890.
+        # The JNU course-selection API is reached directly over HTTPS 443; if a
+        # local proxy is configured but not running, requests would fail before
+        # reaching the university server.
+        self.session.trust_env = False
         self.session.headers.update(credentials.headers)
 
     def search_class(self, teaching_class_id: str) -> CourseInfo:
@@ -165,11 +201,11 @@ class CourseClient:
 
         try:
             response = self.session.post(PUBLIC_COURSE_URL, data=payload, timeout=REQUEST_TIMEOUT)
-            result = response.json()
+            result = _json_or_error(response, f"查询 {query}")
+        except ApiError:
+            raise
         except requests.RequestException as exc:
             raise ApiError(f"查询 {query} 请求失败: {exc}") from exc
-        except ValueError as exc:
-            raise ApiError(f"查询 {query} 返回的不是 JSON。") from exc
 
         data_list = result.get("dataList") or []
         if not data_list:
@@ -199,11 +235,11 @@ class CourseClient:
                 data=self.build_add_payload(course),
                 timeout=REQUEST_TIMEOUT,
             )
-            return response.json()
+            return _json_or_error(response, f"提交 {course.teaching_class_id}")
+        except ApiError:
+            raise
         except requests.RequestException as exc:
             raise ApiError(f"提交 {course.teaching_class_id} 请求失败: {exc}") from exc
-        except ValueError as exc:
-            raise ApiError(f"提交 {course.teaching_class_id} 返回的不是 JSON。") from exc
 
     def submit_round(
         self,

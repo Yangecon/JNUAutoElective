@@ -27,6 +27,9 @@ except ZoneInfoNotFoundError:
     BEIJING_TZ = timezone(timedelta(hours=8), name="Asia/Shanghai")
 
 
+MAX_CREDENTIAL_AGE_SECONDS = 24 * 60 * 60
+
+
 INDEX_HTML = r"""<!doctype html>
 <html lang="zh-CN">
 <head>
@@ -329,7 +332,7 @@ INDEX_HTML = r"""<!doctype html>
 
     function applyState(state) {
       credDot.className = "dot " + (state.credentials.exists ? "ok" : (state.capture.running ? "busy" : "warn"));
-      credText.textContent = state.credentials.exists ? `已登录 ${state.credentials.student_code || ""}` : (state.capture.running ? "等待登录" : "未登录");
+      credText.textContent = state.credentials.exists ? `已登录 ${state.credentials.student_code || ""}` : (state.capture.running ? "等待登录" : (state.credentials.expired ? "登录已过期" : "未登录"));
       runDot.className = "dot " + (state.snatch.running ? "busy" : "ok");
       runText.textContent = state.snatch.running ? "抢课中" : "空闲";
     }
@@ -812,7 +815,7 @@ CONSOLE_HTML = r"""<!doctype html>
 
     function applyState(state) {
       credDot.className = "dot " + (state.credentials.exists ? "ok" : (state.capture.running ? "busy" : "warn"));
-      credText.textContent = state.credentials.exists ? `已登录 ${state.credentials.student_code || ""}` : (state.capture.running ? "等待登录" : "未登录");
+      credText.textContent = state.credentials.exists ? `已登录 ${state.credentials.student_code || ""}` : (state.capture.running ? "等待登录" : (state.credentials.expired ? "登录已过期" : "未登录"));
       runDot.className = "dot " + (state.snatch.running ? "busy" : "ok");
       runText.textContent = state.snatch.running ? "抢课中" : "空闲";
       overlay.classList.toggle("show", !state.credentials.exists);
@@ -1157,13 +1160,24 @@ class WebState:
 
     def credentials_info(self) -> dict[str, Any]:
         if not self.credentials_path.exists():
-            return {"exists": False, "student_code": None, "elective_batch_code": None}
+            return {"exists": False, "expired": False, "student_code": None, "elective_batch_code": None}
+        age_seconds = time.time() - self.credentials_path.stat().st_mtime
+        if age_seconds > MAX_CREDENTIAL_AGE_SECONDS:
+            return {
+                "exists": False,
+                "expired": True,
+                "age_seconds": age_seconds,
+                "student_code": None,
+                "elective_batch_code": None,
+            }
         try:
             credentials = Credentials.load(self.credentials_path)
         except (OSError, CredentialError, json.JSONDecodeError):
-            return {"exists": False, "student_code": None, "elective_batch_code": None}
+            return {"exists": False, "expired": False, "student_code": None, "elective_batch_code": None}
         return {
             "exists": True,
+            "expired": False,
+            "age_seconds": age_seconds,
             "student_code": credentials.student_code,
             "elective_batch_code": credentials.elective_batch_code,
         }
@@ -1202,6 +1216,9 @@ def _read_json(handler: BaseHTTPRequestHandler) -> dict[str, Any]:
 def _load_credentials(state: WebState) -> Credentials:
     if not state.credentials_path.exists():
         raise CredentialError("请先登录捕获凭据。")
+    age_seconds = time.time() - state.credentials_path.stat().st_mtime
+    if age_seconds > MAX_CREDENTIAL_AGE_SECONDS:
+        raise CredentialError("本地 credentials 已超过 1 天，请重新登录捕获凭据。")
     return Credentials.load(state.credentials_path)
 
 
@@ -1469,6 +1486,9 @@ def run_web(
     server = ThreadingHTTPServer((host, port), make_handler(state))
     url = f"http://{host}:{port}/"
     state.log(f"[系统] 控制台已启动: {url}")
+    if state.credentials_info().get("expired"):
+        state.log("[登录] 本地 credentials 已超过 1 天，将自动重新登录并覆盖旧文件。")
+        _start_capture(state)
     if open_browser:
         webbrowser.open(url)
     try:

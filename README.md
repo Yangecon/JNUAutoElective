@@ -200,7 +200,7 @@ python -m jnu_auto_elective web --no-open
 | Browser does not open automatically | Keep the black terminal window running and manually visit `http://127.0.0.1:8765/`. |
 | Chrome or Edge cannot start | Confirm at least one supported browser is installed; check logs for driver or browser startup errors. |
 | Dashboard stays not logged in | Complete normal login in the popup window and trigger the course-selection page request. If it times out, click relogin. |
-| Search returns nothing | Check the teaching class ID or course name, current batch, login status, and network. Course-name search can only read candidates returned by the current interface. |
+| Search returns nothing or fails | Check the teaching class ID or course name, current batch, login status, and network. If the dashboard reports an authentication problem or the query still fails, click relogin, complete login again, and then query once more. Course-name search can only read candidates returned by the current interface. |
 | Start button is disabled | Confirm you are logged in, no task is already running, and the target list is not empty. |
 | Task starts immediately | `official start time - early-access seconds` is already in the past. Check date, time, and early-access setting. |
 | Script says success but official system does not | Success detection is based on response text and is best effort. The official university system is authoritative. |
