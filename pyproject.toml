@@ -1,0 +1,21 @@
+[project]
+name = "jnu-auto-elective"
+version = "0.1.0"
+description = "A lightweight command-line helper for JNU course elective requests."
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = [
+    "requests>=2.31",
+    "selenium-wire>=5.1",
+    "blinker<1.6",
+    "pyOpenSSL<26.2",
+    "setuptools<81",
+]
+
+[project.scripts]
+jnu-auto-elective = "jnu_auto_elective.cli:main"
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]
+addopts = "-p no:cacheprovider"
