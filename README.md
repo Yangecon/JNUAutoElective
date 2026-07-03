@@ -1,6 +1,6 @@
 # JNUAutoElective
 
-English | [中文说明](#中文说明)
+English | [中文说明](README.zh-CN.md)
 
 JNUAutoElective is a local helper for the Jinan University course selection system. It runs on your own computer, opens a local web dashboard, captures the session created by your normal browser login, lets you search and confirm teaching classes, and submits only the classes you explicitly add to the target list.
 
@@ -17,7 +17,7 @@ This project does not include or commit any user credentials. Login credentials 
 - [FAQ and troubleshooting](#faq-and-troubleshooting)
 - [Security and compliance checklist](#security-and-compliance-checklist)
 - [Project structure](#project-structure)
-- [中文说明](#中文说明)
+- [中文说明](README.zh-CN.md)
 
 ## What it does
 
@@ -143,13 +143,6 @@ python -m venv .venv
 pip install -r requirements.txt
 ```
 
-For tests only:
-
-```bash
-pip install -r requirements-dev.txt
-pytest
-```
-
 ### Capture credentials
 
 ```bash
@@ -236,181 +229,5 @@ jnu_auto_elective/
   credentials.py    credential parsing, saving, and loading
   sniffer.py        selenium-wire login request capture
   web.py            local web dashboard
-tests/
-  test_client.py
-  test_credentials.py
-  test_web.py
 ```
-
-## 中文说明
-
-[返回英文](#jnuautoelective)
-
-JNUAutoElective 是一个面向暨南大学选课系统的本地自动化工具，提供网页监控台和命令行两种使用方式。它可以捕获本地登录会话、查询教学班、维护待抢列表，并按设定时间提交选课请求。
-
-项目不会内置或提交任何用户凭据。登录信息只会保存在你自己的电脑上，默认文件名为 `credentials.json`，并已被 `.gitignore` 排除在版本控制之外。请不要把 `credentials.json` 发给他人，也不要上传到公开仓库、网盘或聊天群。
-
-### 点哪个运行？
-
-Windows 用户直接双击项目根目录里的：
-
-```text
-start_web.bat
-```
-
-这个脚本会自动完成全部启动流程：创建项目自己的 `.venv` 虚拟环境、安装依赖、启动本地网页控制台，并打开：
-
-```text
-http://127.0.0.1:8765/
-```
-
-使用时保持 `start_web.bat` 打开的黑色窗口不要关闭。
-
-### 推荐抢课流程
-
-1. 抢课开始前约 5 分钟，双击 `start_web.bat`。
-2. 启动页会显示北京时间大时钟，点击“开始”进入监控台。
-3. 如果监控台显示未登录，程序会自动弹出 Chrome 或 Edge 登录窗口。
-4. 弹出的“获取 credentials”页面就是学校系统的正常登录页面，可以用二维码登录，也可以用账号密码登录。
-5. 登录成功后，程序会在本地生成或更新 `credentials.json`。这个文件相当于你的本地登录凭据，请自己保管，不要分享给他人。
-6. 页面显示“已登录”后，输入要抢的教学班号；如果只知道课程名，也可以先用课程名查询。
-7. 课程名查询可能返回多个教学班，请在候选列表里勾选真正要抢/选的教学班号。
-8. 点击“加入待抢”，确认左侧“待抢列表”无误。
-9. 设置“正式开抢时间（北京时间）”。
-10. 设置“提前访问秒数”，默认提前 60 秒开始访问抢课接口。
-11. 到抢课前点击“开始抢课”，程序会等到“正式开抢时间 - 提前访问秒数”再开始高频提交。
-12. 程序只会针对待抢列表里的教学班号反复提交，直到判断选上或你手动点击“停止抢课”。
-
-右上角“课表”按钮会打开独立课表页，展示一周七天、每天 1-13 节；课表页左上角可以返回主页面。
-
-这个仓库走本地网页控制台和轻量命令行两条路线，方便阅读、测试和日常使用。
-
-### 功能
-
-- 自动打开 Chrome 或 Edge 登录选课系统并捕获必要凭据
-- 支持二维码登录和账号密码登录
-- 按“教学班号”查询课程信息
-- 按课程名查询候选教学班
-- 维护网页端待抢列表
-- 按设定时间和提前访问秒数提交选课请求
-- 按轮次批量提交选课请求
-- 支持 `--dry-run` 只查询不提交
-- 核心逻辑带单元测试，不依赖真实账号
-
-### 环境
-
-Python 3.9 及以上。
-
-```bash
-python -m venv .venv
-.\.venv\Scripts\Activate.ps1
-pip install -r requirements.txt
-```
-
-如果只跑测试：
-
-```bash
-pip install -r requirements-dev.txt
-pytest
-```
-
-### 使用
-
-#### 图形监控页面
-
-推荐直接启动本地监控页面：
-
-```bash
-python -m jnu_auto_elective web
-```
-
-程序会用系统默认浏览器打开 `http://127.0.0.1:8765/` 启动页。点击“开始”进入监控台后，如果本地没有可用凭据，页面会自动请求后端弹出 Chrome 或 Edge 登录捕获窗口。这个获取 credentials 的页面就是学校系统的正常登录页面；你可以扫码登录，也可以使用账号密码登录。登录并捕获成功后，页面会进入监控状态。已有凭据时会直接进入监控页面。
-
-页面里可以输入教学班号或课程名称、查询课程、查看授课教师/开课单位/上课时间地点，并查看实时日志。课程名查询可能返回多个候选教学班；请在候选列表里勾选真正要抢/选的教学班号，点击“加入待抢”，确认左侧待抢列表无误后再点击“开始抢课”。程序只会针对待抢列表里的教学班号反复提交，直到判断选上或你手动停止。右上角的“课表”按钮会打开独立课表页，展示一周七天、每天 1-13 节；左上角可返回主页面。如果教务返回的时间字段能解析出星期和节次，课程会自动落到对应格子里。
-
-正式抢课建议提前约 5 分钟打开页面并完成登录，确认页面显示“已登录”后，再输入要抢的课程教学班号。到了抢课时间直接开始即可；如果只知道课程名称，先用课程名查询候选，再勾选对应教学班号。
-
-#### 1. 捕获登录凭据
-
-```bash
-python -m jnu_auto_elective capture --out credentials.json
-```
-
-命令会启动 Chrome 或 Edge。请在浏览器里正常登录暨南大学选课系统，支持二维码登录或账号密码登录。程序监听到选课相关请求后会自动保存 `credentials.json`。
-
-再次提醒：`credentials.json` 保存在本地，包含可以代表你当前登录状态的信息。不要把它分享给任何人，也不要提交到 Git 或公开平台。
-
-#### 2. 准备教学班号
-
-新建本地文件 `classes.txt`，每行一个教学班号：
-
-```txt
-ABC123-01
-DEF456-02
-```
-
-注意：这里填的是“教学班号”，不是课程号。
-
-#### 3. 先试跑查询
-
-```bash
-python -m jnu_auto_elective run --credentials credentials.json --classes classes.txt --dry-run
-```
-
-确认查询到的课程无误后，再执行提交。
-
-#### 4. 开始提交
-
-```bash
-python -m jnu_auto_elective run --credentials credentials.json --classes classes.txt --rounds 3 --interval 1
-```
-
-参数说明：
-
-- `--rounds`：对课程列表重复提交的轮数，默认 `3`
-- `--interval`：每次请求之间的间隔秒数，默认 `1.0`
-- `--dry-run`：只查询课程，不提交选课
-
-### 项目结构
-
-```text
-jnu_auto_elective/
-  __main__.py       模块入口
-  cli.py            命令行参数与流程编排
-  client.py         选课接口封装
-  config.py         URL 与默认参数
-  credentials.py    凭据解析、保存与读取
-  sniffer.py        selenium-wire 登录请求捕获
-tests/
-  test_client.py
-  test_credentials.py
-```
-
-### 最后
-
-仅供学习、交流与自动化脚本研究，请遵守学校选课规定与系统使用规则。
-
-使用本工具产生的任何后果由使用者自行承担。
-
-### 常见问题与排查
-
-| 现象 | 处理方法 |
-| --- | --- |
-| 双击后提示找不到 Python | 安装 Python 3.9+，确认命令行可运行 `python --version`，再重新启动。 |
-| 浏览器没有自动打开 | 保持黑色窗口运行，手动访问 `http://127.0.0.1:8765/`。 |
-| Chrome/Edge 无法启动 | 确认至少安装一种受支持浏览器；查看日志中的驱动或启动错误。 |
-| 一直显示未登录 | 在弹出窗口内完成正常登录并触发选课页面请求；超时后点击重新登录。 |
-| 查询无结果 | 核对教学班号/课程名、当期批次、登录状态和网络；课程名搜索最多读取接口当前返回的候选。 |
-| 开始按钮不可用 | 确认已登录、没有任务正在运行，且待抢列表非空。 |
-| 任务立即开始 | “正式时间减提前秒数”已经过去；重新检查日期、时间和提前量。 |
-| 显示成功但官方系统未确认 | 脚本是基于返回文本的尽力判断；以学校官方系统记录为准。 |
-| 课表缺少课程 | 先在主页面查询课程；若时间字段不能解析，课程不会自动落格。 |
-
-### 安全与合规清单
-
-- 只在自己的电脑上运行，确认地址为本机 `127.0.0.1`。
-- 不分享、不上传 `credentials.json`，不用真实凭据做截图或演示。
-- 开始前逐项核对教学班号、教师、时间、地点和待抢列表。
-- 使用学校允许的请求频率；遇到限流、异常或规则提示立即停止。
-- 最终结果以学校官方系统为准，并在使用后关闭服务窗口。
 
